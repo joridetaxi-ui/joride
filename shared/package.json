@@ -1,0 +1,7 @@
+{
+  "name": "rapido-shared-types",
+  "version": "1.0.0",
+  "description": "Shared TypeScript types and constants for Customer, Captain, Admin and Backend",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts"
+}

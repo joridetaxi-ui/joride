@@ -1,0 +1,223 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  CUSTOMER
+  CAPTAIN
+  ADMIN
+  SUPER_ADMIN
+  KYC_ADMIN
+  FINANCE_ADMIN
+  SUPPORT_ADMIN
+}
+
+enum KycStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  SUSPENDED
+  BLOCKED
+}
+
+enum ServiceType {
+  BIKE_TAXI
+  AUTO
+  PARCEL
+  PRIME_BIKE
+}
+
+enum RideStatus {
+  REQUESTED
+  SEARCHING
+  ACCEPTED
+  ARRIVED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED_BY_CUSTOMER
+  CANCELLED_BY_CAPTAIN
+}
+
+enum ParcelStatus {
+  REQUESTED
+  ACCEPTED
+  ARRIVED_PICKUP
+  PACKAGE_PICKED_UP
+  IN_TRANSIT
+  ARRIVED_DESTINATION
+  DELIVERED
+  RETURNED
+  FAILED
+}
+
+enum PaymentMethod {
+  UPI
+  CASH
+  WALLET
+  CARD
+}
+
+model User {
+  id            String    @id @default(uuid())
+  phoneNumber   String    @unique
+  name          String?
+  email         String?
+  role          Role      @default(CUSTOMER)
+  walletBalance Decimal   @default(0.00)
+  rating        Float     @default(5.0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  customerRides   Ride[]    @relation("CustomerRides")
+  customerParcels Parcel[]  @relation("CustomerParcels")
+  captainProfile  Captain?
+  walletTxns      WalletTransaction[]
+  supportTickets  SupportTicket[]
+}
+
+model Captain {
+  id              String      @id @default(uuid())
+  userId          String      @unique
+  user            User        @relation(fields: [userId], references: [id])
+  vehicleType     ServiceType @default(BIKE_TAXI)
+  vehicleNumber   String      @unique
+  drivingLicense  String
+  rcNumber        String
+  insuranceNumber String?
+  pucNumber       String?
+  panNumber       String?
+  kycStatus       KycStatus   @default(PENDING)
+  rejectionReason String?
+  isOnline        Boolean     @default(false)
+  currentLat      Float?
+  currentLng      Float?
+  lastHeading     Float?
+  acceptanceRate  Float       @default(95.0)
+  cancellationRate Float      @default(2.5)
+  todayEarnings   Decimal     @default(0.00)
+  totalEarnings   Decimal     @default(0.00)
+  rating          Float       @default(4.9)
+  createdAt       DateTime    @default(now())
+
+  captainRides    Ride[]      @relation("CaptainRides")
+  captainParcels  Parcel[]    @relation("CaptainParcels")
+}
+
+model Ride {
+  id              String        @id @default(uuid())
+  customerId      String
+  customer        User          @relation("CustomerRides", fields: [customerId], references: [id])
+  captainId       String?
+  captain         Captain?      @relation("CaptainRides", fields: [captainId], references: [id])
+  serviceType     ServiceType   @default(BIKE_TAXI)
+  status          RideStatus    @default(REQUESTED)
+  startOtp        String        // 4-digit verification code
+  pickupAddress   String
+  pickupLat       Float
+  pickupLng       Float
+  dropAddress     String
+  dropLat         Float
+  dropLng         Float
+  distanceKm      Float
+  durationMins    Int
+  baseFare        Decimal
+  surgeMultiplier Float         @default(1.0)
+  discountAmount  Decimal       @default(0.00)
+  totalFare       Decimal
+  platformFee     Decimal
+  captainEarnings Decimal
+  paymentMethod   PaymentMethod @default(UPI)
+  isPaid          Boolean       @default(false)
+  forWhom         String?       @default("For me")
+  createdAt       DateTime      @default(now())
+  completedAt     DateTime?
+}
+
+model Parcel {
+  id              String        @id @default(uuid())
+  senderId        String
+  sender          User          @relation("CustomerParcels", fields: [senderId], references: [id])
+  captainId       String?
+  captain         Captain?      @relation("CaptainParcels", fields: [captainId], references: [id])
+  status          ParcelStatus  @default(REQUESTED)
+  pickupOtp       String
+  deliveryOtp     String
+  receiverName    String
+  receiverPhone   String
+  packageCategory String
+  packageWeightKg Float
+  proofOfDelivery String?
+  pickupAddress   String
+  pickupLat       Float
+  pickupLng       Float
+  dropAddress     String
+  dropLat         Float
+  dropLng         Float
+  fare            Decimal
+  platformFee     Decimal
+  captainEarnings Decimal
+  paymentMethod   PaymentMethod @default(UPI)
+  isPaid          Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  deliveredAt     DateTime?
+}
+
+model WalletTransaction {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  amount      Decimal
+  type        String   // CREDIT, DEBIT
+  category    String   // RIDE_PAYMENT, CAPTAIN_EARNING, WITHDRAWAL, INCENTIVE, REFUND
+  referenceId String?
+  description String
+  balanceAfter Decimal
+  createdAt   DateTime @default(now())
+}
+
+model PricingRule {
+  id            String      @id @default(uuid())
+  city          String
+  serviceType   ServiceType
+  baseFare      Decimal
+  baseKm        Float       @default(2.0)
+  perKmRate     Decimal
+  perMinuteRate Decimal
+  minimumFare   Decimal
+  cancellationFee Decimal   @default(20.00)
+  surgeMultiplier Float     @default(1.0)
+  isActive      Boolean     @default(true)
+}
+
+model Coupon {
+  id             String      @id @default(uuid())
+  code           String      @unique
+  discountPercent Float?
+  fixedDiscount  Decimal?
+  maxDiscount    Decimal?
+  minBookingVal  Decimal     @default(0.00)
+  serviceType    ServiceType?
+  expiryDate     DateTime
+  usageLimit     Int         @default(1000)
+  usedCount      Int         @default(0)
+  isActive       Boolean     @default(true)
+}
+
+model SupportTicket {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  category    String   // SAFETY_SOS, PAYMENT_ISSUE, LOST_ITEM, APP_SUPPORT
+  priority    String   // EMERGENCY_SOS, HIGH, MEDIUM, LOW
+  subject     String
+  description String
+  status      String   @default("OPEN") // OPEN, INVESTIGATING, RESOLVED, CLOSED
+  assignedTo  String?
+  createdAt   DateTime @default(now())
+}

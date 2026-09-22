@@ -1,0 +1,6 @@
+{
+  "name": "VeloGo",
+  "description": "Comprehensive Bike Taxi & Parcel Delivery Platform with real-time tracking, captain dispatch, KYC, and admin dashboard",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

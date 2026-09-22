@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">VeloGo</string>
+    <string name="app_name_customer">VeloGo Rider</string>
+    <string name="app_name_captain">VeloGo Captain</string>
+    <string name="app_name_admin">VeloGo Admin</string>
+    <string name="app_name_hub">VeloGo Suite</string>
+    <string name="tagline">Instant Bike Taxis &amp; Parcel Express</string>
+    <string name="currency_symbol">₹</string>
+</resources>
